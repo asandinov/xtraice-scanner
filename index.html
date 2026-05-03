@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xtraice · Card Scanner</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap');
+
+:root {
+  --bg:     #f0f2f5;
+  --panel:  #ffffff;
+  --border: #dde1ea;
+  --text:   #1a1e2e;
+  --muted:  #8892aa;
+  --accent: #005f99;
+  --acc2:   #0099d4;
+  --ice:    #e4f4fb;
+  --ok:     #00915a;
+  --warn:   #c97000;
+  --err:    #c0001a;
+  --sh:     0 2px 12px rgba(0,50,100,0.09);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Barlow', sans-serif;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--acc2) 60%, #80d4f0);
+  z-index: 100;
+}
+
+/* ── LOGIN ── */
+#login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-card {
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 44px 40px 36px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 8px 40px rgba(0,50,100,0.13);
+  text-align: center;
+}
+
+.login-logo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 32px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.login-logo em { color: var(--acc2); font-style: normal; }
+
+.login-sub {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 300;
+  font-size: 13px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 36px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  margin-bottom: 14px;
+}
+
+.login-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+}
+
+.login-input {
+  background: #f7f9fc;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  transition: border-color .2s;
+  width: 100%;
+}
+.login-input:focus { outline: none; border-color: var(--acc2); background: #fff; }
+.login-input.shake { animation: shake .35s; border-color: var(--err); }
+
+@keyframes shake {
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(4px)}
+}
+
+.btn-login {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background .2s, transform .1s;
+}
+.btn-login:hover { background: var(--acc2); transform: translateY(-1px); }
+
+.login-err {
+  font-size: 12px;
+  color: var(--err);
+  margin-top: 10px;
+  min-height: 18px;
+}
+
+/* ── APP ── */
+#app-screen { display: none; }
+
+.app { max-width: 960px; margin: 0 auto; padding: 40px 20px 80px; }
+
+header { display: flex; align-items: center; margin-bottom: 36px; }
+.logo {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 28px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase;
+}
+.logo em { color: var(--acc2); font-style: normal; }
+.logo-sep { width: 1px; height: 28px; background: var(--border); margin: 0 18px; }
+.logo-sub {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 300;
+  font-size: 16px; letter-spacing: 4px; text-transform: uppercase; color: var(--muted);
+}
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.badge {
+  background: var(--ice); border: 1px solid #b8dff0; color: var(--accent);
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 20px;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+}
+.btn-logout {
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 5px; cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+.btn-logout:hover { border-color: var(--err); color: var(--err); }
+
+/* Drop zone */
+.dropzone {
+  background: var(--panel); border: 2px dashed #b8cfe0; border-radius: 10px;
+  padding: 52px 24px; text-align: center; cursor: pointer;
+  transition: border-color .2s, background .2s, box-shadow .2s; box-shadow: var(--sh);
+}
+.dropzone:hover, .dropzone.drag { border-color: var(--acc2); background: var(--ice); box-shadow: 0 4px 20px rgba(0,100,180,0.12); }
+.dropzone input { display: none; }
+.dz-icon { font-size: 44px; display: block; margin-bottom: 14px; }
+.dropzone h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 22px; letter-spacing: 1px; margin-bottom: 6px; }
+.dropzone p { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.dropzone p strong { color: var(--accent); font-weight: 500; }
+
+/* Run button */
+#run-wrap { margin-top: 18px; display: none; }
+.btn-run {
+  background: var(--accent); color: #fff; border: none;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 14px; letter-spacing: 2.5px; text-transform: uppercase;
+  padding: 11px 30px; border-radius: 6px; cursor: pointer;
+  transition: background .2s, transform .1s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-run:hover:not(:disabled) { background: var(--acc2); transform: translateY(-1px); }
+.btn-run:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.pbar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+.pfill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--acc2)); border-radius: 2px; transition: width .35s; width: 0; }
+
+.slbl {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--muted); margin: 28px 0 10px;
+  display: flex; align-items: center; gap: 12px;
+}
+.slbl::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.file-list { display: flex; flex-direction: column; gap: 6px; }
+.fi {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: var(--sh); transition: border-color .25s;
+}
+.fi.processing { border-color: var(--acc2); }
+.fi.done       { border-color: var(--ok); }
+.fi.review     { border-color: var(--warn); }
+.fi.error      { border-color: var(--err); }
+.thumb { width: 42px; height: 42px; border-radius: 5px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+.fi-info { flex: 1; min-width: 0; }
+.fi-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fi-st { font-size: 11px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--muted); }
+.dot.processing { background: var(--acc2); animation: blink .9s infinite; }
+.dot.done   { background: var(--ok); }
+.dot.review { background: var(--warn); }
+.dot.error  { background: var(--err); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+#review-section { display: none; }
+.review-card {
+  background: var(--panel); border: 1.5px solid var(--warn);
+  border-radius: 10px; padding: 20px 22px; margin-bottom: 14px; box-shadow: var(--sh);
+}
+.review-card.ok { border-color: var(--ok); }
+.rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.rc-head h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; color: var(--warn); }
+.review-card.ok .rc-head h3 { color: var(--ok); }
+.rc-file { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+.rc-thumb { height: 60px; border-radius: 5px; object-fit: cover; border: 1px solid var(--border); margin-left: 10px; vertical-align: middle; }
+.fg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+@media(max-width:580px){.fg-grid{grid-template-columns:1fr;}}
+.fg { display: flex; flex-direction: column; gap: 3px; }
+.fg.s2 { grid-column: 1/-1; }
+.fl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-weight: 600; }
+.finp {
+  background: #f7f9fc; border: 1px solid var(--border); border-radius: 5px;
+  padding: 7px 10px; font-family: 'Barlow', sans-serif; font-size: 13px;
+  color: var(--text); transition: border-color .2s; width: 100%;
+}
+.finp:focus { outline: none; border-color: var(--acc2); background: #fff; }
+.btn-confirm {
+  margin-top: 14px; background: transparent;
+  border: 1.5px solid var(--ok); color: var(--ok);
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 7px 20px; border-radius: 5px; cursor: pointer; transition: background .2s;
+}
+.btn-confirm:hover { background: rgba(0,145,90,0.07); }
+.btn-confirm:disabled { opacity: .5; cursor: default; }
+
+#results-section { display: none; }
+.stats { display: flex; gap: 28px; margin-bottom: 18px; flex-wrap: wrap; }
+.sb { display: flex; flex-direction: column; }
+.sv { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 28px; line-height: 1; color: var(--accent); }
+.sv.g { color: var(--ok); }
+.sl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.tw { overflow-x: auto; border-radius: 8px; box-shadow: var(--sh); }
+table { width: 100%; border-collapse: collapse; background: var(--panel); font-size: 12px; }
+thead th {
+  background: var(--accent); color: #fff;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 9px 12px; text-align: left; white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.1);
+}
+tbody td {
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+}
+tbody tr:hover td { background: var(--ice); }
+tbody tr:last-child td { border-bottom: none; }
+.abar { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.btn-dl {
+  background: var(--ok); color: #fff; border: none;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 10px 26px; border-radius: 6px; cursor: pointer; transition: opacity .2s;
+}
+.btn-dl:hover { opacity: .85; }
+.btn-reset {
+  background: transparent; border: 1.5px solid var(--border); color: var(--muted);
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+  font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 10px 26px; border-radius: 6px; cursor: pointer; transition: border-color .2s, color .2s;
+}
+.btn-reset:hover { border-color: var(--muted); color: var(--text); }
+#export-btn { display: none; margin-top: 14px; }
+.error-msg {
+  background: #fff0f2; border: 1px solid #f5b8c0; border-radius: 6px;
+  padding: 10px 14px; font-size: 12px; color: var(--err); margin-top: 8px; display: none;
+}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">XTRA<em>✕</em>ICE</div>
+    <div class="login-sub">Card Scanner</div>
+
+    <div class="login-field">
+      <div class="login-label">Usuario</div>
+      <input class="login-input" id="l-user" type="text" autocomplete="username" placeholder="Usuario" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <div class="login-label">Contraseña</div>
+      <input class="login-input" id="l-pass" type="password" autocomplete="current-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
+    <button class="btn-login" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app-screen">
+<div class="app">
+
+  <header>
+    <div class="logo">XTRA<em>✕</em>ICE</div>
+    <div class="logo-sep"></div>
+    <div class="logo-sub">Card Scanner</div>
+    <div class="header-right">
+      <div class="badge">Gemini Vision</div>
+      <button class="btn-logout" onclick="doLogout()">↩ Salir</button>
+    </div>
+  </header>
+
+  <div class="dropzone" id="dz">
+    <input type="file" id="fi" accept="image/*" multiple>
+    <span class="dz-icon">📋</span>
+    <h2>Selecciona o arrastra las fotos</h2>
+    <p>Formatos admitidos: <strong>JPG · PNG · WEBP · BMP · GIF</strong><br>
+    Gemini Vision extrae texto manuscrito e impreso con alta precisión.</p>
+  </div>
+
+  <div id="run-wrap">
+    <button class="btn-run" id="run-btn" onclick="startProcessing()">▶ Analizar con Gemini</button>
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    <div class="error-msg" id="errmsg"></div>
+  </div>
+
+  <div id="queue-wrap" style="display:none">
+    <div class="slbl">Archivos cargados</div>
+    <div class="file-list" id="file-list"></div>
+  </div>
+
+  <div id="review-section">
+    <div class="slbl">Revisión de tarjetas</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+      Gemini ha extraído los datos. Revisa y corrige si es necesario antes de exportar.
+    </p>
+    <div id="review-cards"></div>
+    <button class="btn-run" id="export-btn" onclick="showResults()">✓ Exportar todos</button>
+  </div>
+
+  <div id="results-section">
+    <div class="slbl">Resultado final</div>
+    <div class="stats" id="stats"></div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>Company</th><th>Name</th><th>Position</th><th>City</th><th>Country</th>
+          <th>Phone</th><th>Cell</th><th>Email</th><th>Interested in</th>
+          <th>Rink Size (sqm)</th><th>Installation date</th><th>Notes</th>
+        </tr></thead>
+        <tbody id="rtbody"></tbody>
+      </table>
+    </div>
+    <div class="abar">
+      <button class="btn-dl" onclick="dlCSV()">⬇ Descargar CSV</button>
+      <button class="btn-reset" onclick="resetApp()">↺ Nuevo lote</button>
+    </div>
+  </div>
+
+</div>
+</div><!-- /app-screen -->
+
+<script>
+// ── Credentials ──
+const USERS = {
+  'Xtraice': 'sadfoinaslkdjfnasgjnfs'
+};
+
+// ── Gemini ──
+const GEMINI_KEY = 'AIzaSyCFfHE6039WlYd4l9CXJl3ktwLAx53Ve_w';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+
+const FIELDS = [
+  'Company','Name','Position','City','Country','Phone','Cell','Email',
+  'Interested in: Rent/buy/sell','Rink Size (sqm)','Installation date','Notes'
+];
+
+const PROMPT = `You are a data extraction assistant for Xtraice, a company that sells synthetic ice rinks.
+Analyze this business card / contact form image (it may contain handwritten text).
+
+Extract EXACTLY these 12 fields. Use empty string "" if the field is blank or not visible.
+Return ONLY a valid JSON object, no markdown fences, no extra text:
+
+{
+  "Company": "",
+  "Name": "",
+  "Position": "",
+  "City": "",
+  "Country": "",
+  "Phone": "",
+  "Cell": "",
+  "Email": "",
+  "Interested in: Rent/buy/sell": "",
+  "Rink Size (sqm)": "",
+  "Installation date": "",
+  "Notes": ""
+}`;
+
+let files = [], results = [], confirmed = 0;
+
+// ── Login ──
+function doLogin() {
+  const user = document.getElementById('l-user').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('login-err');
+
+  if (USERS[user] && USERS[user] === pass) {
+    sessionStorage.setItem('xtraice_auth', '1');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
+    errEl.textContent = '';
+  } else {
+    errEl.textContent = 'Usuario o contraseña incorrectos.';
+    ['l-user','l-pass'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.add('shake');
+      setTimeout(() => el.classList.remove('shake'), 400);
+    });
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('xtraice_auth');
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('l-user').value = '';
+  document.getElementById('l-pass').value = '';
+  resetApp();
+}
+
+// Auto-login if session active
+if (sessionStorage.getItem('xtraice_auth') === '1') {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+}
+
+// ── Drop zone ──
+const dz = document.getElementById('dz');
+const fi = document.getElementById('fi');
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); addFiles([...e.dataTransfer.files]); });
+fi.addEventListener('change', () => addFiles([...fi.files]));
+
+function addFiles(nf) {
+  const valid = nf.filter(f => f.type.startsWith('image/') || /\.(jpe?g|png|webp|bmp|gif)$/i.test(f.name));
+  if (!valid.length) return;
+  files = [...files, ...valid];
+  renderQueue();
+  document.getElementById('run-wrap').style.display = 'block';
+  document.getElementById('queue-wrap').style.display = 'block';
+}
+
+function renderQueue() {
+  const fl = document.getElementById('file-list');
+  fl.innerHTML = '';
+  files.forEach((f, i) => {
+    fl.innerHTML += `
+      <div class="fi" id="fi${i}">
+        <img class="thumb" src="${URL.createObjectURL(f)}">
+        <div class="fi-info">
+          <div class="fi-name">${esc(f.name)}</div>
+          <div class="fi-st"><span class="dot" id="dot${i}"></span><span id="st${i}">Pendiente</span></div>
+        </div>
+      </div>`;
+  });
+}
+
+function setSt(i, cls, msg) {
+  const fe = document.getElementById('fi' + i);
+  const de = document.getElementById('dot' + i);
+  const se = document.getElementById('st' + i);
+  if (fe) fe.className = 'fi ' + cls;
+  if (de) de.className = 'dot ' + cls;
+  if (se) se.textContent = msg;
+}
+
+// ── Gemini API ──
+async function callGemini(file) {
+  const b64 = await toBase64(file);
+  const mime = file.type || 'image/jpeg';
+  const body = {
+    contents: [{ parts: [
+      { text: PROMPT },
+      { inline_data: { mime_type: mime, data: b64 } }
+    ]}],
+    generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+  };
+  const res = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const clean = text.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+// ── Processing ──
+async function startProcessing() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.textContent = 'Analizando…';
+  results = []; confirmed = 0;
+  document.getElementById('review-cards').innerHTML = '';
+  document.getElementById('review-section').style.display = 'none';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('export-btn').style.display = 'none';
+  document.getElementById('errmsg').style.display = 'none';
+
+  for (let i = 0; i < files.length; i++) {
+    setSt(i, 'processing', 'Analizando con Gemini…');
+    document.getElementById('pfill').style.width = (i / files.length * 100) + '%';
+    try {
+      const data = await callGemini(files[i]);
+      FIELDS.forEach(f => { if (data[f] === undefined) data[f] = ''; });
+      results.push({ file: files[i], data, confirmed: false, idx: i });
+      setSt(i, 'review', 'Extraído — pendiente revisión');
+      addCard(results.length - 1);
+    } catch(e) {
+      const data = {}; FIELDS.forEach(f => data[f] = '');
+      results.push({ file: files[i], data, confirmed: false, idx: i, error: true });
+      setSt(i, 'error', 'Error: ' + e.message.slice(0, 60));
+      addCard(results.length - 1);
+      showError('Error en ' + files[i].name + ': ' + e.message);
+    }
+  }
+
+  document.getElementById('pfill').style.width = '100%';
+  btn.disabled = false; btn.textContent = '▶ Analizar con Gemini';
+  document.getElementById('review-section').style.display = 'block';
+  document.getElementById('review-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function showError(msg) {
+  const el = document.getElementById('errmsg');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+
+// ── Review cards ──
+function addCard(ri) {
+  const r = results[ri];
+  const thumbUrl = URL.createObjectURL(r.file);
+  let html = '';
+  FIELDS.forEach(f => {
+    const s2 = (f === 'Notes' || f === 'Interested in: Rent/buy/sell') ? 's2' : '';
+    const lbl = f.replace('Interested in: Rent/buy/sell', 'Interested in');
+    html += `
+      <div class="fg ${s2}">
+        <div class="fl">${esc(lbl)}</div>
+        <input class="finp" id="inp${ri}_${sid(f)}" value="${esc(r.data[f] || '')}">
+      </div>`;
+  });
+  document.getElementById('review-cards').innerHTML += `
+    <div class="review-card" id="rc${ri}">
+      <div class="rc-head"><h3 id="rh${ri}">📋 Revisar tarjeta</h3></div>
+      <div class="rc-file">📄 ${esc(r.file.name)}<img class="rc-thumb" src="${thumbUrl}"></div>
+      <div class="fg-grid">${html}</div>
+      <button class="btn-confirm" id="bcf${ri}" onclick="confirmCard(${ri})">✓ Confirmar tarjeta</button>
+    </div>`;
+}
+
+function confirmCard(ri) {
+  FIELDS.forEach(f => {
+    const el = document.getElementById(`inp${ri}_${sid(f)}`);
+    if (el) results[ri].data[f] = el.value.trim();
+  });
+  results[ri].confirmed = true; confirmed++;
+  document.getElementById('rc' + ri).classList.add('ok');
+  document.getElementById('rh' + ri).textContent = '✓ Confirmada';
+  const b = document.getElementById('bcf' + ri);
+  b.disabled = true; b.textContent = '✓ Confirmada';
+  setSt(results[ri].idx, 'done', 'Confirmada ✓');
+  if (confirmed >= results.length) document.getElementById('export-btn').style.display = 'inline-flex';
+}
+
+// ── Results ──
+function showResults() {
+  results.forEach((r, ri) => { if (!r.confirmed) confirmCard(ri); });
+  const rb = document.getElementById('rtbody');
+  rb.innerHTML = '';
+  results.forEach(r => {
+    rb.innerHTML += `<tr>${FIELDS.map(f => `<td title="${esc(r.data[f]||'')}">${esc(r.data[f]||'')}</td>`).join('')}</tr>`;
+  });
+  document.getElementById('stats').innerHTML = `
+    <div class="sb"><span class="sv">${results.length}</span><span class="sl">tarjetas procesadas</span></div>
+    <div class="sb"><span class="sv g">${results.filter(r => !r.error).length}</span><span class="sl">extraídas correctamente</span></div>`;
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── CSV ──
+function dlCSV() {
+  const hdr  = FIELDS.map(f => `"${f}"`).join(',');
+  const rows = results.map(r => FIELDS.map(f => `"${(r.data[f]||'').replace(/"/g,'""')}"`).join(','));
+  const csv  = '\uFEFF' + [hdr, ...rows].join('\r\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })),
+    download: `xtraice_contacts_${new Date().toISOString().slice(0,10)}.csv`
+  });
+  a.click();
+}
+
+// ── Reset ──
+function resetApp() {
+  files = []; results = []; confirmed = 0;
+  ['file-list','review-cards','rtbody'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.innerHTML = '';
+  });
+  ['queue-wrap','review-section','results-section','run-wrap'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  const eb = document.getElementById('export-btn'); if (eb) eb.style.display = 'none';
+  const em = document.getElementById('errmsg'); if (em) em.style.display = 'none';
+  const pf = document.getElementById('pfill'); if (pf) pf.style.width = '0';
+  const fi = document.getElementById('fi'); if (fi) fi.value = '';
+}
+
+// ── Helpers ──
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const sid = s => s.replace(/[^a-zA-Z0-9]/g,'_');
+</script>
+</body>
+</html>
