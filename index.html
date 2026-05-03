@@ -235,36 +235,56 @@ header { display: flex; align-items: center; margin-bottom: 36px; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
 #review-section { display: none; }
-.review-card {
-  background: var(--panel); border: 1.5px solid var(--warn);
-  border-radius: 10px; padding: 20px 22px; margin-bottom: 14px; box-shadow: var(--sh);
+
+/* Editable review table */
+.rtw { overflow-x: auto; border-radius: 8px; box-shadow: var(--sh); }
+.rtable { width: 100%; border-collapse: collapse; background: var(--panel); font-size: 12px; }
+.rtable thead th {
+  background: var(--accent); color: #fff;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 9px 10px; text-align: left; white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  position: sticky; top: 0; z-index: 2;
 }
-.review-card.ok { border-color: var(--ok); }
-.rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-.rc-head h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; color: var(--warn); }
-.review-card.ok .rc-head h3 { color: var(--ok); }
-.rc-file { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
-.rc-thumb { height: 60px; border-radius: 5px; object-fit: cover; border: 1px solid var(--border); margin-left: 10px; vertical-align: middle; }
-.fg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
-@media(max-width:580px){.fg-grid{grid-template-columns:1fr;}}
-.fg { display: flex; flex-direction: column; gap: 3px; }
-.fg.s2 { grid-column: 1/-1; }
-.fl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-weight: 600; }
+.rtable thead th.th-img { width: 52px; }
+.rtable tbody tr { transition: background .15s; }
+.rtable tbody tr:hover td { background: var(--ice); }
+.rtable tbody tr.doubt td:first-child { border-left: 3px solid var(--warn); }
+.rtable tbody td {
+  padding: 4px 6px; border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border); vertical-align: middle;
+}
+.rtable tbody tr:last-child td { border-bottom: none; }
+.rtable td.td-img { text-align: center; padding: 4px; }
+.rthumb {
+  width: 44px; height: 44px; border-radius: 4px;
+  object-fit: cover; border: 1px solid var(--border);
+  cursor: pointer; transition: transform .2s;
+}
+.rthumb:hover { transform: scale(1.08); }
 .finp {
-  background: #f7f9fc; border: 1px solid var(--border); border-radius: 5px;
-  padding: 7px 10px; font-family: 'Barlow', sans-serif; font-size: 13px;
-  color: var(--text); transition: border-color .2s; width: 100%;
+  background: transparent; border: 1px solid transparent;
+  border-radius: 4px; padding: 5px 7px;
+  font-family: 'Barlow', sans-serif; font-size: 12px;
+  color: var(--text); transition: border-color .15s, background .15s;
+  width: 100%; min-width: 80px;
 }
+.finp:hover { border-color: var(--border); background: #f7f9fc; }
 .finp:focus { outline: none; border-color: var(--acc2); background: #fff; }
-.btn-confirm {
-  margin-top: 14px; background: transparent;
-  border: 1.5px solid var(--ok); color: var(--ok);
-  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
-  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
-  padding: 7px 20px; border-radius: 5px; cursor: pointer; transition: background .2s;
+.finp.w { border-color: var(--warn) !important; background: #fff9f0 !important; }
+
+/* Lightbox */
+#lightbox {
+  display: none; position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,0.75); align-items: center; justify-content: center;
 }
-.btn-confirm:hover { background: rgba(0,145,90,0.07); }
-.btn-confirm:disabled { opacity: .5; cursor: default; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+#lightbox-close {
+  position: absolute; top: 20px; right: 28px; color: #fff;
+  font-size: 32px; cursor: pointer; line-height: 1;
+}
 
 #results-section { display: none; }
 .stats { display: flex; gap: 28px; margin-bottom: 18px; flex-wrap: wrap; }
@@ -368,13 +388,31 @@ tbody tr:last-child td { border-bottom: none; }
   <div id="review-section">
     <div class="slbl">Revisión de datos extraídos</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
-      Gemini ha extraído los datos de todas las tarjetas. Revisa si algo no es correcto y pulsa <strong>Confirmar y exportar</strong>.
+      Edita cualquier celda directamente. Las filas con <span style="color:var(--warn);font-weight:600">borde naranja</span> tienen campos dudosos. Haz clic en la miniatura para ampliarla.
     </p>
-    <div id="review-cards"></div>
-    <div style="margin-top:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <button class="btn-run" id="export-btn" onclick="confirmAllAndExport()">✓ Confirmar y exportar</button>
-      <span id="doubts-msg" style="font-size:12px;color:var(--warn);display:none;">⚠ Hay campos marcados como dudosos — revísalos antes de exportar.</span>
+    <div class="rtw">
+      <table class="rtable">
+        <thead>
+          <tr>
+            <th class="th-img">Foto</th>
+            <th>Company</th><th>Name</th><th>Position</th><th>City</th><th>Country</th>
+            <th>Phone</th><th>Cell</th><th>Email</th><th>Interested in</th>
+            <th>Rink Size</th><th>Install. date</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="review-tbody"></tbody>
+      </table>
     </div>
+    <div style="margin-top:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <button class="btn-run" id="export-btn" onclick="confirmAllAndExport()">✓ Confirmar y exportar</button>
+      <span id="doubts-msg" style="font-size:12px;color:var(--warn);display:none;">⚠ Hay filas con campos dudosos — revísalas antes de exportar.</span>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" onclick="closeLightbox()">
+    <span id="lightbox-close">✕</span>
+    <img id="lightbox-img" src="" alt="">
   </div>
 
   <div id="results-section">
@@ -406,7 +444,7 @@ const USERS = {
 };
 
 // ── Gemini ──
-const GEMINI_KEY = 'AIzaSyAXcxnnalDa-0iBe4FXzoJCPdF2CggIKu0';
+const GEMINI_KEY = 'AIzaSyCFfHE6039WlYd4l9CXJl3ktwLAx53Ve_w';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
 
 const FIELDS = [
@@ -584,47 +622,38 @@ function showError(msg) {
   el.style.display = 'block';
 }
 
-// ── Global review (all cards in one table) ──
+// ── Global review table ──
 function buildGlobalReview() {
-  const container = document.getElementById('review-cards');
-  container.innerHTML = '';
+  const tbody = document.getElementById('review-tbody');
+  tbody.innerHTML = '';
   let hasDoubt = false;
 
   results.forEach((r, ri) => {
     const thumbUrl = URL.createObjectURL(r.file);
-    // Detect doubts: empty Company or Name, or error flag
-    const companyEmpty = !r.data['Company'];
-    const nameEmpty    = !r.data['Name'];
-    const doubt = r.error || companyEmpty || nameEmpty;
+    const doubt = r.error || !r.data['Company'] || !r.data['Name'];
     if (doubt) hasDoubt = true;
 
-    let fieldsHtml = '';
-    FIELDS.forEach(f => {
-      const s2  = (f === 'Notes' || f === 'Interested in: Rent/buy/sell') ? 's2' : '';
-      const lbl = f.replace('Interested in: Rent/buy/sell', 'Interested in');
-      // Highlight Company and Name if empty
+    const cells = FIELDS.map(f => {
       const isEmpty = (f === 'Company' || f === 'Name') && !r.data[f];
-      fieldsHtml += `
-        <div class="fg ${s2}">
-          <div class="fl">${esc(lbl)}</div>
-          <input class="finp ${isEmpty ? 'w' : ''}" id="inp${ri}_${sid(f)}" value="${esc(r.data[f] || '')}">
-          ${isEmpty ? `<div class="fnote">⚠ Campo vacío — verifica la imagen</div>` : ''}
-        </div>`;
-    });
+      return `<td><input class="finp ${isEmpty ? 'w' : ''}" id="inp${ri}_${sid(f)}" value="${esc(r.data[f] || '')}" title="${esc(f)}"></td>`;
+    }).join('');
 
-    container.innerHTML += `
-      <div class="review-card ${doubt ? '' : 'ok'}" id="rc${ri}" style="margin-bottom:20px">
-        <div class="rc-head">
-          <h3>${doubt ? '⚠ Posible duda' : '✓ OK'} — ${esc(r.file.name)}</h3>
-          <img class="rc-thumb" src="${thumbUrl}" style="margin-left:auto">
-        </div>
-        <div class="fg-grid" style="margin-top:12px">${fieldsHtml}</div>
-      </div>`;
+    tbody.innerHTML += `
+      <tr class="${doubt ? 'doubt' : ''}">
+        <td class="td-img"><img class="rthumb" src="${thumbUrl}" onclick="openLightbox('${thumbUrl}')" title="Ampliar imagen"></td>
+        ${cells}
+      </tr>`;
   });
 
-  if (hasDoubt) {
-    document.getElementById('doubts-msg').style.display = 'inline';
-  }
+  if (hasDoubt) document.getElementById('doubts-msg').style.display = 'inline';
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
 }
 
 function confirmAllAndExport() {
@@ -671,7 +700,7 @@ function dlCSV() {
 // ── Reset ──
 function resetApp() {
   files = []; results = []; confirmed = 0;
-  ['file-list','review-cards','rtbody'].forEach(id => {
+  ['file-list','review-tbody','rtbody'].forEach(id => {
     const el = document.getElementById(id); if (el) el.innerHTML = '';
   });
   ['queue-wrap','review-section','results-section','run-wrap'].forEach(id => {
