@@ -361,7 +361,7 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="logo-sep"></div>
     <div class="logo-sub">Card Scanner</div>
     <div class="header-right">
-      <div class="badge">Gemini Vision</div>
+      <div class="badge">IA Vision</div>
       <button class="btn-logout" onclick="doLogout()">↩ Salir</button>
     </div>
   </header>
@@ -371,11 +371,11 @@ tbody tr:last-child td { border-bottom: none; }
     <span class="dz-icon">📋</span>
     <h2>Selecciona o arrastra las fotos</h2>
     <p>Formatos admitidos: <strong>JPG · PNG · WEBP · BMP · GIF</strong><br>
-    Gemini Vision extrae texto manuscrito e impreso con alta precisión.</p>
+    La IA extrae texto manuscrito e impreso con alta precisión.</p>
   </div>
 
   <div id="run-wrap">
-    <button class="btn-run" id="run-btn" onclick="startProcessing()">▶ Analizar con Gemini</button>
+    <button class="btn-run" id="run-btn" onclick="startProcessing()">▶ Analizar</button>
     <div class="pbar"><div class="pfill" id="pfill"></div></div>
     <div class="error-msg" id="errmsg"></div>
   </div>
@@ -424,7 +424,7 @@ const USERS = {
 };
 
 // ── Gemini ──
-const GEMINI_KEY = 'AIzaSyAXcxnnalDa-0iBe4FXzoJCPdF2CggIKu0';
+const GEMINI_KEY = 'AIzaSyCFfHE6039WlYd4l9CXJl3ktwLAx53Ve_w';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
 
 const FIELDS = [
@@ -568,7 +568,7 @@ async function startProcessing() {
   document.getElementById('errmsg').style.display = 'none';
 
   for (let i = 0; i < files.length; i++) {
-    setSt(i, 'processing', 'Analizando con Gemini…');
+    setSt(i, 'processing', 'Analizando…');
     document.getElementById('pfill').style.width = (i / files.length * 100) + '%';
     try {
       const data = await callGemini(files[i]);
@@ -586,7 +586,7 @@ async function startProcessing() {
   }
 
   document.getElementById('pfill').style.width = '100%';
-  btn.disabled = false; btn.textContent = '▶ Analizar con Gemini';
+  btn.disabled = false; btn.textContent = '▶ Analizar';
   showResults();
   document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
 }
