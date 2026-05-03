@@ -366,12 +366,15 @@ tbody tr:last-child td { border-bottom: none; }
   </div>
 
   <div id="review-section">
-    <div class="slbl">Revisión de tarjetas</div>
+    <div class="slbl">Revisión de datos extraídos</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
-      Gemini ha extraído los datos. Revisa y corrige si es necesario antes de exportar.
+      Gemini ha extraído los datos de todas las tarjetas. Revisa si algo no es correcto y pulsa <strong>Confirmar y exportar</strong>.
     </p>
     <div id="review-cards"></div>
-    <button class="btn-run" id="export-btn" onclick="showResults()">✓ Exportar todos</button>
+    <div style="margin-top:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <button class="btn-run" id="export-btn" onclick="confirmAllAndExport()">✓ Confirmar y exportar</button>
+      <span id="doubts-msg" style="font-size:12px;color:var(--warn);display:none;">⚠ Hay campos marcados como dudosos — revísalos antes de exportar.</span>
+    </div>
   </div>
 
   <div id="results-section">
@@ -555,21 +558,23 @@ async function startProcessing() {
     try {
       const data = await callGemini(files[i]);
       FIELDS.forEach(f => { if (data[f] === undefined) data[f] = ''; });
-      results.push({ file: files[i], data, confirmed: false, idx: i });
-      setSt(i, 'review', 'Extraído — pendiente revisión');
-      addCard(results.length - 1);
+      // Fix: strip spaces from email
+      if (data['Email']) data['Email'] = data['Email'].replace(/\s+/g, '');
+      results.push({ file: files[i], data, idx: i });
+      setSt(i, 'done', 'Extraído ✓');
     } catch(e) {
       const data = {}; FIELDS.forEach(f => data[f] = '');
-      results.push({ file: files[i], data, confirmed: false, idx: i, error: true });
+      results.push({ file: files[i], data, idx: i, error: true });
       setSt(i, 'error', 'Error: ' + e.message.slice(0, 60));
-      addCard(results.length - 1);
       showError('Error en ' + files[i].name + ': ' + e.message);
     }
   }
 
   document.getElementById('pfill').style.width = '100%';
   btn.disabled = false; btn.textContent = '▶ Analizar con Gemini';
+  buildGlobalReview();
   document.getElementById('review-section').style.display = 'block';
+  document.getElementById('export-btn').style.display = 'inline-flex';
   document.getElementById('review-section').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -579,46 +584,66 @@ function showError(msg) {
   el.style.display = 'block';
 }
 
-// ── Review cards ──
-function addCard(ri) {
-  const r = results[ri];
-  const thumbUrl = URL.createObjectURL(r.file);
-  let html = '';
-  FIELDS.forEach(f => {
-    const s2 = (f === 'Notes' || f === 'Interested in: Rent/buy/sell') ? 's2' : '';
-    const lbl = f.replace('Interested in: Rent/buy/sell', 'Interested in');
-    html += `
-      <div class="fg ${s2}">
-        <div class="fl">${esc(lbl)}</div>
-        <input class="finp" id="inp${ri}_${sid(f)}" value="${esc(r.data[f] || '')}">
+// ── Global review (all cards in one table) ──
+function buildGlobalReview() {
+  const container = document.getElementById('review-cards');
+  container.innerHTML = '';
+  let hasDoubt = false;
+
+  results.forEach((r, ri) => {
+    const thumbUrl = URL.createObjectURL(r.file);
+    // Detect doubts: empty Company or Name, or error flag
+    const companyEmpty = !r.data['Company'];
+    const nameEmpty    = !r.data['Name'];
+    const doubt = r.error || companyEmpty || nameEmpty;
+    if (doubt) hasDoubt = true;
+
+    let fieldsHtml = '';
+    FIELDS.forEach(f => {
+      const s2  = (f === 'Notes' || f === 'Interested in: Rent/buy/sell') ? 's2' : '';
+      const lbl = f.replace('Interested in: Rent/buy/sell', 'Interested in');
+      // Highlight Company and Name if empty
+      const isEmpty = (f === 'Company' || f === 'Name') && !r.data[f];
+      fieldsHtml += `
+        <div class="fg ${s2}">
+          <div class="fl">${esc(lbl)}</div>
+          <input class="finp ${isEmpty ? 'w' : ''}" id="inp${ri}_${sid(f)}" value="${esc(r.data[f] || '')}">
+          ${isEmpty ? `<div class="fnote">⚠ Campo vacío — verifica la imagen</div>` : ''}
+        </div>`;
+    });
+
+    container.innerHTML += `
+      <div class="review-card ${doubt ? '' : 'ok'}" id="rc${ri}" style="margin-bottom:20px">
+        <div class="rc-head">
+          <h3>${doubt ? '⚠ Posible duda' : '✓ OK'} — ${esc(r.file.name)}</h3>
+          <img class="rc-thumb" src="${thumbUrl}" style="margin-left:auto">
+        </div>
+        <div class="fg-grid" style="margin-top:12px">${fieldsHtml}</div>
       </div>`;
   });
-  document.getElementById('review-cards').innerHTML += `
-    <div class="review-card" id="rc${ri}">
-      <div class="rc-head"><h3 id="rh${ri}">📋 Revisar tarjeta</h3></div>
-      <div class="rc-file">📄 ${esc(r.file.name)}<img class="rc-thumb" src="${thumbUrl}"></div>
-      <div class="fg-grid">${html}</div>
-      <button class="btn-confirm" id="bcf${ri}" onclick="confirmCard(${ri})">✓ Confirmar tarjeta</button>
-    </div>`;
+
+  if (hasDoubt) {
+    document.getElementById('doubts-msg').style.display = 'inline';
+  }
 }
 
-function confirmCard(ri) {
-  FIELDS.forEach(f => {
-    const el = document.getElementById(`inp${ri}_${sid(f)}`);
-    if (el) results[ri].data[f] = el.value.trim();
+function confirmAllAndExport() {
+  // Collect all edited values from inputs
+  results.forEach((r, ri) => {
+    FIELDS.forEach(f => {
+      const el = document.getElementById(`inp${ri}_${sid(f)}`);
+      if (el) {
+        let val = el.value.trim();
+        if (f === 'Email') val = val.replace(/\s+/g, '');
+        r.data[f] = val;
+      }
+    });
   });
-  results[ri].confirmed = true; confirmed++;
-  document.getElementById('rc' + ri).classList.add('ok');
-  document.getElementById('rh' + ri).textContent = '✓ Confirmada';
-  const b = document.getElementById('bcf' + ri);
-  b.disabled = true; b.textContent = '✓ Confirmada';
-  setSt(results[ri].idx, 'done', 'Confirmada ✓');
-  if (confirmed >= results.length) document.getElementById('export-btn').style.display = 'inline-flex';
+  showResults();
 }
 
 // ── Results ──
 function showResults() {
-  results.forEach((r, ri) => { if (!r.confirmed) confirmCard(ri); });
   const rb = document.getElementById('rtbody');
   rb.innerHTML = '';
   results.forEach(r => {
@@ -654,6 +679,7 @@ function resetApp() {
   });
   const eb = document.getElementById('export-btn'); if (eb) eb.style.display = 'none';
   const em = document.getElementById('errmsg'); if (em) em.style.display = 'none';
+  const dm = document.getElementById('doubts-msg'); if (dm) dm.style.display = 'none';
   const pf = document.getElementById('pfill'); if (pf) pf.style.width = '0';
   const fi = document.getElementById('fi'); if (fi) fi.value = '';
 }
