@@ -385,45 +385,19 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="file-list" id="file-list"></div>
   </div>
 
-  <div id="review-section">
-    <div class="slbl">Revisión de datos extraídos</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
-      Edita cualquier celda directamente. Las filas con <span style="color:var(--warn);font-weight:600">borde naranja</span> tienen campos dudosos. Haz clic en la miniatura para ampliarla.
-    </p>
-    <div class="rtw">
-      <table class="rtable">
-        <thead>
-          <tr>
-            <th class="th-img">Foto</th>
-            <th>Company</th><th>Name</th><th>Position</th><th>City</th><th>Country</th>
-            <th>Phone</th><th>Cell</th><th>Email</th><th>Interested in</th>
-            <th>Rink Size</th><th>Install. date</th><th>Notes</th>
-          </tr>
-        </thead>
-        <tbody id="review-tbody"></tbody>
-      </table>
-    </div>
-    <div style="margin-top:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <button class="btn-run" id="export-btn" onclick="confirmAllAndExport()">✓ Confirmar y exportar</button>
-      <span id="doubts-msg" style="font-size:12px;color:var(--warn);display:none;">⚠ Hay filas con campos dudosos — revísalas antes de exportar.</span>
-    </div>
-  </div>
-
-  <!-- Lightbox -->
-  <div id="lightbox" onclick="closeLightbox()">
-    <span id="lightbox-close">✕</span>
-    <img id="lightbox-img" src="" alt="">
-  </div>
-
   <div id="results-section">
-    <div class="slbl">Resultado final</div>
+    <div class="slbl">Resultado</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+      Edita cualquier celda si es necesario. Haz clic en la miniatura para ampliar la imagen. Las filas con <span style="color:var(--warn);font-weight:600">borde naranja</span> tienen campos dudosos.
+    </p>
     <div class="stats" id="stats"></div>
     <div class="tw">
-      <table>
+      <table class="rtable">
         <thead><tr>
+          <th class="th-img">Foto</th>
           <th>Company</th><th>Name</th><th>Position</th><th>City</th><th>Country</th>
           <th>Phone</th><th>Cell</th><th>Email</th><th>Interested in</th>
-          <th>Rink Size (sqm)</th><th>Installation date</th><th>Notes</th>
+          <th>Rink Size</th><th>Install. date</th><th>Notes</th>
         </tr></thead>
         <tbody id="rtbody"></tbody>
       </table>
@@ -432,6 +406,12 @@ tbody tr:last-child td { border-bottom: none; }
       <button class="btn-dl" onclick="dlCSV()">⬇ Descargar CSV</button>
       <button class="btn-reset" onclick="resetApp()">↺ Nuevo lote</button>
     </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" onclick="closeLightbox()">
+    <span id="lightbox-close">✕</span>
+    <img id="lightbox-img" src="" alt="">
   </div>
 
 </div>
@@ -584,10 +564,7 @@ async function startProcessing() {
   const btn = document.getElementById('run-btn');
   btn.disabled = true; btn.textContent = 'Analizando…';
   results = []; confirmed = 0;
-  document.getElementById('review-cards').innerHTML = '';
-  document.getElementById('review-section').style.display = 'none';
   document.getElementById('results-section').style.display = 'none';
-  document.getElementById('export-btn').style.display = 'none';
   document.getElementById('errmsg').style.display = 'none';
 
   for (let i = 0; i < files.length; i++) {
@@ -610,10 +587,8 @@ async function startProcessing() {
 
   document.getElementById('pfill').style.width = '100%';
   btn.disabled = false; btn.textContent = '▶ Analizar con Gemini';
-  buildGlobalReview();
-  document.getElementById('review-section').style.display = 'block';
-  document.getElementById('export-btn').style.display = 'inline-flex';
-  document.getElementById('review-section').scrollIntoView({ behavior: 'smooth' });
+  showResults();
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
 }
 
 function showError(msg) {
@@ -622,10 +597,10 @@ function showError(msg) {
   el.style.display = 'block';
 }
 
-// ── Global review table ──
-function buildGlobalReview() {
-  const tbody = document.getElementById('review-tbody');
-  tbody.innerHTML = '';
+// ── Results (editable table) ──
+function showResults() {
+  const rb = document.getElementById('rtbody');
+  rb.innerHTML = '';
   let hasDoubt = false;
 
   results.forEach((r, ri) => {
@@ -638,14 +613,20 @@ function buildGlobalReview() {
       return `<td><input class="finp ${isEmpty ? 'w' : ''}" id="inp${ri}_${sid(f)}" value="${esc(r.data[f] || '')}" title="${esc(f)}"></td>`;
     }).join('');
 
-    tbody.innerHTML += `
+    rb.innerHTML += `
       <tr class="${doubt ? 'doubt' : ''}">
-        <td class="td-img"><img class="rthumb" src="${thumbUrl}" onclick="openLightbox('${thumbUrl}')" title="Ampliar imagen"></td>
+        <td class="td-img"><img class="rthumb" src="${thumbUrl}" onclick="openLightbox('${thumbUrl}')" title="Ampliar"></td>
         ${cells}
       </tr>`;
   });
 
-  if (hasDoubt) document.getElementById('doubts-msg').style.display = 'inline';
+  const ok = results.filter(r => !r.error).length;
+  document.getElementById('stats').innerHTML = `
+    <div class="sb"><span class="sv">${results.length}</span><span class="sl">tarjetas</span></div>
+    <div class="sb"><span class="sv g">${ok}</span><span class="sl">extraídas OK</span></div>
+    ${hasDoubt ? `<div class="sb"><span class="sv" style="color:var(--warn)">${results.filter(r=>r.error||!r.data['Company']||!r.data['Name']).length}</span><span class="sl">con dudas</span></div>` : ''}`;
+
+  document.getElementById('results-section').style.display = 'block';
 }
 
 function openLightbox(src) {
@@ -656,8 +637,9 @@ function closeLightbox() {
   document.getElementById('lightbox').classList.remove('open');
 }
 
-function confirmAllAndExport() {
-  // Collect all edited values from inputs
+// ── CSV ──
+function dlCSV() {
+  // Read current values from editable table
   results.forEach((r, ri) => {
     FIELDS.forEach(f => {
       const el = document.getElementById(`inp${ri}_${sid(f)}`);
@@ -668,25 +650,6 @@ function confirmAllAndExport() {
       }
     });
   });
-  showResults();
-}
-
-// ── Results ──
-function showResults() {
-  const rb = document.getElementById('rtbody');
-  rb.innerHTML = '';
-  results.forEach(r => {
-    rb.innerHTML += `<tr>${FIELDS.map(f => `<td title="${esc(r.data[f]||'')}">${esc(r.data[f]||'')}</td>`).join('')}</tr>`;
-  });
-  document.getElementById('stats').innerHTML = `
-    <div class="sb"><span class="sv">${results.length}</span><span class="sl">tarjetas procesadas</span></div>
-    <div class="sb"><span class="sv g">${results.filter(r => !r.error).length}</span><span class="sl">extraídas correctamente</span></div>`;
-  document.getElementById('results-section').style.display = 'block';
-  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
-}
-
-// ── CSV ──
-function dlCSV() {
   const hdr  = FIELDS.map(f => `"${f}"`).join(',');
   const rows = results.map(r => FIELDS.map(f => `"${(r.data[f]||'').replace(/"/g,'""')}"`).join(','));
   const csv  = '\uFEFF' + [hdr, ...rows].join('\r\n');
@@ -700,15 +663,13 @@ function dlCSV() {
 // ── Reset ──
 function resetApp() {
   files = []; results = []; confirmed = 0;
-  ['file-list','review-tbody','rtbody'].forEach(id => {
+  ['file-list','rtbody'].forEach(id => {
     const el = document.getElementById(id); if (el) el.innerHTML = '';
   });
-  ['queue-wrap','review-section','results-section','run-wrap'].forEach(id => {
+  ['queue-wrap','results-section','run-wrap'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
-  const eb = document.getElementById('export-btn'); if (eb) eb.style.display = 'none';
   const em = document.getElementById('errmsg'); if (em) em.style.display = 'none';
-  const dm = document.getElementById('doubts-msg'); if (dm) dm.style.display = 'none';
   const pf = document.getElementById('pfill'); if (pf) pf.style.width = '0';
   const fi = document.getElementById('fi'); if (fi) fi.value = '';
 }
